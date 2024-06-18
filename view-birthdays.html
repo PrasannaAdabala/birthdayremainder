@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Birthdays</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            color: #333;
+        }
+        h1 {
+            color: #2ecc71;
+            margin-top: 30px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+            width: 100%;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #e0f7fa;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .birthdayList {
+            display: flex;
+            gap: 15px;
+            padding: 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+            justify-content: flex-start;
+        }
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        .birthdayItem {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: #fff;
+            width: 180px;
+            height: 240px;
+            box-sizing: border-box;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #333;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            flex: 0 0 auto;
+        }
+        .birthdayItem:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+        }
+        .removeButton, .editButton {
+            margin-top: 10px;
+            padding: 6px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.3s ease;
+        }
+        .removeButton {
+            background-color: #e74c3c;
+            color: #fff;
+        }
+        .removeButton:hover {
+            background-color: #c0392b;
+        }
+        .editButton {
+            background-color: #3498db;
+            color: #fff;
+        }
+        .editButton:hover {
+            background-color: #2980b9;
+        }
+        a {
+            display: block;
+            margin-top: 20px;
+            color: #3498db;
+            text-decoration: none;
+            font-size: 16px;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 768px) {
+            .birthdayItem {
+                width: 150px;
+                height: 200px;
+                font-size: 12px;
+            }
+        }
+        @media (max-width: 480px) {
+            .birthdayItem {
+                width: 120px;
+                height: 180px;
+                font-size: 10px;
+            }
+        }
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #2ecc71;
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 1000;
+        }
+        .notification.show {
+            opacity: 1;
+        }
+        .notification-icon {
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <h1>Birthdays</h1>
+    <div class="container">
+        <div class="section" id="upcomingBirthdaysSection">
+            <h2 style="color: #3498db;">Upcoming Birthdays</h2>
+            <div class="birthdayList" id="upcomingBirthdayList"></div>
+        </div>
+        <div class="section" id="completedBirthdaysSection">
+            <h2 style="color: #e74c3c;">Completed Birthdays</h2>
+            <div class="birthdayList" id="completedBirthdayList"></div>
+        </div>
+    </div>
+    <a href="add-birthday.html">Add More Birthdays</a>
+    <div id="notification" class="notification"></div>
+    <script>
+       
+    window.onload = function() {
+        loadBirthdays();
+        setInterval(updateCountdowns, 1000);
+        requestNotificationPermission();
+        setInterval(checkBirthdays, 60000); // Check every minute
+    };
+
+    function loadBirthdays() {
+        const savedBirthdays = JSON.parse(localStorage.getItem('birthdays')) || [];
+        const upcomingBirthdayList = document.getElementById('upcomingBirthdayList');
+        const completedBirthdayList = document.getElementById('completedBirthdayList');
+        upcomingBirthdayList.innerHTML = '';
+        completedBirthdayList.innerHTML = '';
+        const today = new Date();
+        savedBirthdays.forEach(birthday => {
+            const birthdayDate = new Date(birthday.date);
+            birthdayDate.setFullYear(today.getFullYear());
+            const birthdayItem = createBirthdayItem(birthday.name, birthday.date);
+            if (birthdayDate >= today) {
+                upcomingBirthdayList.appendChild(birthdayItem);
+            } else {
+                completedBirthdayList.appendChild(birthdayItem);
+            }
+        });
+    }
+
+    function createBirthdayItem(name, date) {
+        const birthdayItem = document.createElement('div');
+        birthdayItem.className = 'birthdayItem';
+        birthdayItem.innerHTML = `<strong>${name}</strong>'s birthday on ${date} 
+            <br><span class="countdown" data-date="${date}">${calculateCountdown(date)}</span>
+            <button class="editButton" onclick="editBirthday(this)">Edit</button>
+            <button class="removeButton" onclick="removeBirthday(this)">Remove</button>`;
+        return birthdayItem;
+    }
+
+    function removeBirthday(button) {
+        const birthdayItem = button.parentElement;
+        const name = birthdayItem.querySelector('strong').innerText;
+        const date = birthdayItem.querySelector('.countdown').dataset.date;
+
+        let birthdays = JSON.parse(localStorage.getItem('birthdays'));
+        birthdays = birthdays.filter(birthday => !(birthday.name === name && birthday.date === date));
+        localStorage.setItem('birthdays', JSON.stringify(birthdays));
+
+        birthdayItem.remove();
+    }
+
+    function editBirthday(button) {
+        const birthdayItem = button.parentElement;
+        const name = birthdayItem.querySelector('strong').innerText;
+        const date = birthdayItem.querySelector('.countdown').dataset.date;
+
+        const nameInput = document.getElementById('name');
+        const dateInput = document.getElementById('date');
+
+        nameInput.value = name;
+        dateInput.value = date;
+
+        removeBirthday(button);
+    }
+
+    function calculateCountdown(date) {
+        const now = new Date();
+        const birthdayDate = new Date(date);
+        birthdayDate.setFullYear(now.getFullYear());
+        if (birthdayDate < now) {
+            birthdayDate.setFullYear(now.getFullYear() + 1);
+        }
+        const diffTime = birthdayDate - now;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const diffMinutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
+        const diffSeconds = Math.floor((diffTime % (1000 * 60)) / 1000);
+        return `${diffDays}d ${diffHours}h ${diffMinutes}m ${diffSeconds}s`;
+    }
+
+    function updateCountdowns() {
+        const countdownElements = document.querySelectorAll('.countdown');
+        countdownElements.forEach(element => {
+            const date = element.getAttribute('data-date');
+            element.textContent = calculateCountdown(date);
+        });
+    }
+
+    function requestNotificationPermission() {
+        if (Notification.permission !== 'granted') {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    console.log('Notification permission granted.');
+                } else {
+                    console.log('Notification permission denied.');
+                }
+            });
+        }
+    }
+
+    function checkBirthdays() {
+        const now = new Date();
+        const today = `${now.getMonth() + 1}-${now.getDate()}`;
+        const birthdays = JSON.parse(localStorage.getItem('birthdays')) || [];
+        birthdays.forEach(birthday => {
+            const birthdayDate = new Date(birthday.date);
+            const birthdayToday = `${birthdayDate.getMonth() + 1}-${birthdayDate.getDate()}`;
+            if (today === birthdayToday) {
+                showNotification(`${birthday.name}'s birthday is today!`);
+            }
+        });
+    }
+
+    function showNotification(message) {
+        if (Notification.permission === 'granted') {
+            const notification = new Notification('Birthday Reminder', {
+                body: message,
+                icon: 'https://img.icons8.com/color/48/000000/birthday-cake.png'
+            });
+
+            notification.onclick = () => {
+                window.focus();
+            };
+        }
+    }
+</script>
+
+</body>
+</html>
