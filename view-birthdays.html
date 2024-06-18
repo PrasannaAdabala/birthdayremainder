@@ -59,7 +59,7 @@
             font-size: 14px;
             color: #333;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
-            flex: 0 0 auto;
+            flex: 0 0 auto; /* Prevents flex items from shrinking */
         }
         .birthdayItem:hover {
             transform: scale(1.05);
@@ -149,130 +149,148 @@
     <a href="add-birthday.html">Add More Birthdays</a>
     <div id="notification" class="notification"></div>
     <script>
-       
-    window.onload = function() {
-        loadBirthdays();
-        setInterval(updateCountdowns, 1000);
-        requestNotificationPermission();
-        setInterval(checkBirthdays, 60000); // Check every minute
-    };
+        window.onload = function() {
+            loadBirthdays();
+            setInterval(updateCountdowns, 1000);
+            requestNotificationPermission();
+            setInterval(checkBirthdays, 60000); // Check every minute
+        };
 
-    function loadBirthdays() {
-        const savedBirthdays = JSON.parse(localStorage.getItem('birthdays')) || [];
-        const upcomingBirthdayList = document.getElementById('upcomingBirthdayList');
-        const completedBirthdayList = document.getElementById('completedBirthdayList');
-        upcomingBirthdayList.innerHTML = '';
-        completedBirthdayList.innerHTML = '';
-        const today = new Date();
-        savedBirthdays.forEach(birthday => {
-            const birthdayDate = new Date(birthday.date);
-            birthdayDate.setFullYear(today.getFullYear());
-            const birthdayItem = createBirthdayItem(birthday.name, birthday.date);
-            if (birthdayDate >= today) {
-                upcomingBirthdayList.appendChild(birthdayItem);
-            } else {
-                completedBirthdayList.appendChild(birthdayItem);
-            }
-        });
-    }
-
-    function createBirthdayItem(name, date) {
-        const birthdayItem = document.createElement('div');
-        birthdayItem.className = 'birthdayItem';
-        birthdayItem.innerHTML = `<strong>${name}</strong>'s birthday on ${date} 
-            <br><span class="countdown" data-date="${date}">${calculateCountdown(date)}</span>
-            <button class="editButton" onclick="editBirthday(this)">Edit</button>
-            <button class="removeButton" onclick="removeBirthday(this)">Remove</button>`;
-        return birthdayItem;
-    }
-
-    function removeBirthday(button) {
-        const birthdayItem = button.parentElement;
-        const name = birthdayItem.querySelector('strong').innerText;
-        const date = birthdayItem.querySelector('.countdown').dataset.date;
-
-        let birthdays = JSON.parse(localStorage.getItem('birthdays'));
-        birthdays = birthdays.filter(birthday => !(birthday.name === name && birthday.date === date));
-        localStorage.setItem('birthdays', JSON.stringify(birthdays));
-
-        birthdayItem.remove();
-    }
-
-    function editBirthday(button) {
-        const birthdayItem = button.parentElement;
-        const name = birthdayItem.querySelector('strong').innerText;
-        const date = birthdayItem.querySelector('.countdown').dataset.date;
-
-        const nameInput = document.getElementById('name');
-        const dateInput = document.getElementById('date');
-
-        nameInput.value = name;
-        dateInput.value = date;
-
-        removeBirthday(button);
-    }
-
-    function calculateCountdown(date) {
-        const now = new Date();
-        const birthdayDate = new Date(date);
-        birthdayDate.setFullYear(now.getFullYear());
-        if (birthdayDate < now) {
-            birthdayDate.setFullYear(now.getFullYear() + 1);
-        }
-        const diffTime = birthdayDate - now;
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const diffMinutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
-        const diffSeconds = Math.floor((diffTime % (1000 * 60)) / 1000);
-        return `${diffDays}d ${diffHours}h ${diffMinutes}m ${diffSeconds}s`;
-    }
-
-    function updateCountdowns() {
-        const countdownElements = document.querySelectorAll('.countdown');
-        countdownElements.forEach(element => {
-            const date = element.getAttribute('data-date');
-            element.textContent = calculateCountdown(date);
-        });
-    }
-
-    function requestNotificationPermission() {
-        if (Notification.permission !== 'granted') {
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    console.log('Notification permission granted.');
+        function loadBirthdays() {
+            const savedBirthdays = JSON.parse(localStorage.getItem('birthdays')) || [];
+            const upcomingBirthdayList = document.getElementById('upcomingBirthdayList');
+            const completedBirthdayList = document.getElementById('completedBirthdayList');
+            upcomingBirthdayList.innerHTML = '';
+            completedBirthdayList.innerHTML = '';
+            const today = new Date();
+            savedBirthdays.forEach(birthday => {
+                const birthdayDate = new Date(birthday.date);
+                birthdayDate.setFullYear(today.getFullYear());
+                const birthdayItem = createBirthdayItem(birthday.name, birthday.date);
+                if (birthdayDate >= today) {
+                    upcomingBirthdayList.appendChild(birthdayItem);
                 } else {
-                    console.log('Notification permission denied.');
+                    birthdayItem.querySelector('.countdown').textContent = calculateDaysAgo(birthdayDate);
+                    completedBirthdayList.appendChild(birthdayItem);
                 }
             });
         }
-    }
 
-    function checkBirthdays() {
-        const now = new Date();
-        const today = `${now.getMonth() + 1}-${now.getDate()}`;
-        const birthdays = JSON.parse(localStorage.getItem('birthdays')) || [];
-        birthdays.forEach(birthday => {
-            const birthdayDate = new Date(birthday.date);
-            const birthdayToday = `${birthdayDate.getMonth() + 1}-${birthdayDate.getDate()}`;
-            if (today === birthdayToday) {
-                showNotification(`${birthday.name}'s birthday is today!`);
-            }
-        });
-    }
-
-    function showNotification(message) {
-        if (Notification.permission === 'granted') {
-            const notification = new Notification('Birthday Reminder', {
-                body: message,
-                icon: 'https://img.icons8.com/color/48/000000/birthday-cake.png'
-            });
-
-            notification.onclick = () => {
-                window.focus();
-            };
+        function createBirthdayItem(name, date) {
+            const birthdayItem = document.createElement('div');
+            birthdayItem.className = 'birthdayItem';
+            birthdayItem.innerHTML = `<strong>${name}</strong>'s birthday on ${date} 
+                <br><span class="countdown" data-date="${date}">${calculateCountdown(date)}</span>
+                <button class="editButton" onclick="editBirthday(this)">Edit</button>
+                <button class="removeButton" onclick="removeBirthday(this)">Remove</button>`;
+            return birthdayItem;
         }
-    }
-</script>
+
+        function removeBirthday(button) {
+            const birthdayItem = button.parentElement;
+            const name = birthdayItem.querySelector('strong').innerText;
+            const date = birthdayItem.querySelector('.countdown').dataset.date;
+
+            let birthdays = JSON.parse(localStorage.getItem('birthdays'));
+            birthdays = birthdays.filter(birthday => !(birthday.name === name && birthday.date === date));
+            localStorage.setItem('birthdays', JSON.stringify(birthdays));
+
+            birthdayItem.remove();
+        }
+
+        function editBirthday(button) {
+            const birthdayItem = button.parentElement;
+            const name = birthdayItem.querySelector('strong').innerText;
+            const date = birthdayItem.querySelector('.countdown').dataset.date;
+
+            const nameInput = document.getElementById('name');
+            const dateInput = document.getElementById('date');
+
+            nameInput.value = name;
+            dateInput.value = date;
+
+            removeBirthday(button);
+        }
+
+        function calculateCountdown(date) {
+            const now = new Date();
+            const birthdayDate = new Date(date);
+            birthdayDate.setFullYear(now.getFullYear());
+            if (birthdayDate < now) {
+                birthdayDate.setFullYear(now.getFullYear() + 1);
+            }
+            const diffTime = birthdayDate - now;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const diffMinutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
+            const diffSeconds = Math.floor((diffTime % (1000 * 60)) / 1000);
+            return `${diffDays}d ${diffHours}h ${diffMinutes}m ${diffSeconds}s`;
+        }
+
+        function calculateDaysAgo(date) {
+            const now = new Date();
+            const birthdayDate = new Date(date);
+            birthdayDate.setFullYear(now.getFullYear());
+            if (birthdayDate > now) {
+                birthdayDate.setFullYear(now.getFullYear() - 1);
+            }
+            const diffTime = now - birthdayDate;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            return `${diffDays} days ago`;
+        }
+
+        function updateCountdowns() {
+            const countdownElements = document.querySelectorAll('.countdown');
+            countdownElements.forEach(element => {
+                const date = element.getAttribute('data-date');
+                const birthdayDate = new Date(date);
+                birthdayDate.setFullYear(new Date().getFullYear());
+                if (birthdayDate < new Date()) {
+                    element.textContent = calculateDaysAgo(date);
+                } else {
+                    element.textContent = calculateCountdown(date);
+                }
+            });
+        }
+
+        function requestNotificationPermission() {
+            if (Notification.permission !== 'granted') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        console.log('Notification permission granted.');
+                    } else {
+                        console.log('Notification permission denied.');
+                    }
+                });
+            }
+        }
+
+        function checkBirthdays() {
+            const now = new Date();
+            const today = `${now.getMonth() + 1}-${now.getDate()}`;
+            const birthdays = JSON.parse(localStorage.getItem('birthdays')) || [];
+            birthdays.forEach(birthday => {
+                const birthdayDate = new Date(birthday.date);
+                const birthdayToday = `${birthdayDate.getMonth() + 1}-${birthdayDate.getDate()}`;
+                if (today === birthdayToday) {
+                    showNotification(`${birthday.name}'s birthday is today!`);
+                }
+            });
+        }
+
+        function showNotification(message) {
+            if (Notification.permission === 'granted') {
+                const notification = new Notification('Birthday Reminder', {
+                    body: message,
+                    icon: 'https://img.icons8.com/color/48/000000/birthday-cake.png'
+                });
+
+                notification.onclick = () => {
+                    window.focus();
+                };
+            }
+        }
+    </script>
 
 </body>
 </html>
