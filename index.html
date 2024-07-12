@@ -89,6 +89,15 @@
     </form>
     <a href="./view-birthdays.html">View Birthdays</a>
     <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const editBirthdayData = JSON.parse(localStorage.getItem('editBirthday'));
+            if (editBirthdayData) {
+                document.getElementById('name').value = editBirthdayData.name;
+                document.getElementById('date').value = editBirthdayData.date;
+                localStorage.removeItem('editBirthday');
+            }
+        });
+
         function addBirthday() {
             const nameInput = document.getElementById('name');
             const dateInput = document.getElementById('date');
@@ -102,7 +111,7 @@
 
                 nameInput.value = '';
                 dateInput.value = '';
-                // alert("Birthday added successfully!");
+                alert("Birthday added successfully!"); 
             }
         }
     </script>

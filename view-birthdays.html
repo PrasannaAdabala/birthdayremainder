@@ -181,7 +181,7 @@
             birthdayItem.className = 'birthdayItem';
             birthdayItem.innerHTML = `<strong>${name}</strong>'s birthday on ${date} 
                 <br><span class="countdown" data-date="${date}">${calculateCountdown(date)}</span>
-                <button class="editButton" onclick="editBirthday(this)">Edit</button>
+                <button class="editButton" onclick="editBirthday('${name}', '${date}')">Edit</button>
                 <button class="removeButton" onclick="removeBirthday(this)">Remove</button>`;
             return birthdayItem;
         }
@@ -198,18 +198,10 @@
             birthdayItem.remove();
         }
 
-        function editBirthday(button) {
-            const birthdayItem = button.parentElement;
-            const name = birthdayItem.querySelector('strong').innerText;
-            const date = birthdayItem.querySelector('.countdown').dataset.date;
-
-            const nameInput = document.getElementById('name');
-            const dateInput = document.getElementById('date');
-
-            nameInput.value = name;
-            dateInput.value = date;
-
-            removeBirthday(button);
+        function editBirthday(name, date) {
+            const editBirthdayData = { name, date };
+            localStorage.setItem('editBirthday', JSON.stringify(editBirthdayData));
+            window.location.href = './index.html';
         }
 
         function calculateCountdown(date) {
